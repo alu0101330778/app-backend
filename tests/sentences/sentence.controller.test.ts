@@ -4,6 +4,8 @@ import app from '../../src/index';
 import Sentence from '../../src/models/sentence.model';
 import User from '../../src/models/user.model';
 
+const API_KEY = (process.env.API_KEYS?.split(',')[0] || 'test_api_key').trim();
+
 describe('Sentence Controller', () => {
   beforeEach(async () => {
     await Sentence.deleteMany({});
@@ -13,7 +15,9 @@ describe('Sentence Controller', () => {
   describe('GET /sentences', () => {
     it('debe devolver un array de frases', async () => {
       await Sentence.create({ title: 't1', body: 'b1', end: 'e1' });
-      const res = await request(app).get('/sentences');
+      const res = await request(app)
+        .get('/sentences')
+        .set('x-api-key', API_KEY); 
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
@@ -23,7 +27,9 @@ describe('Sentence Controller', () => {
   describe('GET /sentences/all', () => {
     it('debe devolver todas las frases', async () => {
       await Sentence.create({ title: 't2', body: 'b2', end: 'e2' });
-      const res = await request(app).get('/sentences/all');
+      const res = await request(app)
+        .get('/sentences/all')
+        .set('x-api-key', API_KEY);
       expect(res.statusCode).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
       expect(res.body.length).toBeGreaterThanOrEqual(1);
@@ -34,6 +40,7 @@ describe('Sentence Controller', () => {
     it('debe crear una frase', async () => {
       const res = await request(app)
         .post('/sentences')
+        .set('x-api-key', API_KEY)
         .send({ title: 't3', body: 'b3', end: 'e3' });
       expect(res.statusCode).toBe(201);
       expect(res.body.message).toBe('Sentence created succesfully');
@@ -44,6 +51,7 @@ describe('Sentence Controller', () => {
     it('debe fallar si faltan campos', async () => {
       const res = await request(app)
         .post('/sentences')
+        .set('x-api-key', API_KEY)
         .send({ title: 't4' });
       expect(res.statusCode).toBe(500);
     });
@@ -54,6 +62,7 @@ describe('Sentence Controller', () => {
       await Sentence.create({ title: 't5', body: 'b5', end: 'e5' });
       const res = await request(app)
         .post('/sentences/get')
+        .set('x-api-key', API_KEY)
         .send({ emotions: ['alegria'] });
       expect(res.statusCode).toBe(200);
       expect(res.body).toBeDefined();
@@ -64,6 +73,7 @@ describe('Sentence Controller', () => {
     it('debe devolver 400 si faltan datos', async () => {
       const res = await request(app)
         .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY)
         .send({});
       expect(res.statusCode).toBe(400);
     });
@@ -71,6 +81,7 @@ describe('Sentence Controller', () => {
     it('debe devolver 404 si el usuario no existe', async () => {
       const res = await request(app)
         .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY)
         .send({ userId: new mongoose.Types.ObjectId().toString(), emotions: ['alegria'] });
       expect(res.statusCode).toBe(404);
     });
@@ -88,6 +99,7 @@ describe('Sentence Controller', () => {
       await user.save();
       const res = await request(app)
         .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY)
         .send({ userId: (user._id as mongoose.Types.ObjectId).toString(), emotions: ['alegria'] });
       expect(res.statusCode).toBe(404);
     });
@@ -106,6 +118,7 @@ describe('Sentence Controller', () => {
       await Sentence.create({ title: 't6', body: 'b6', end: 'e6' });
       const res = await request(app)
         .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY)
         .send({ userId: (user._id as mongoose.Types.ObjectId).toString(), emotions: ['alegria'] });
       expect(res.statusCode).toBe(200);
       expect(res.body).toBeDefined();
@@ -121,7 +134,9 @@ describe('Sentence Controller', () => {
 
     it('GET /sentences debe manejar errores internos', async () => {
       jest.spyOn(Sentence, 'find').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app).get('/sentences');
+      const res = await request(app)
+        .get('/sentences')
+        .set('x-api-key', API_KEY); 
       expect(res.statusCode).toBe(500);
       (Sentence.find as any).mockRestore();
     });
@@ -130,6 +145,7 @@ describe('Sentence Controller', () => {
       jest.spyOn(Sentence.prototype, 'save').mockRejectedValueOnce(new Error('fail'));
       const res = await request(app)
         .post('/sentences')
+        .set('x-api-key', API_KEY) 
         .send({ title: 'fail', body: 'fail', end: 'fail' });
       expect(res.statusCode).toBe(500);
       (Sentence.prototype.save as any).mockRestore();
@@ -137,19 +153,26 @@ describe('Sentence Controller', () => {
 
     it('POST /sentences/get debe manejar errores internos', async () => {
       jest.spyOn(Sentence, 'findOne').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app).post('/sentences/get').send({});
+      const res = await request(app)
+        .post('/sentences/get')
+        .set('x-api-key', API_KEY) 
+        .send({});
       expect(res.statusCode).toBe(500);
       (Sentence.findOne as any).mockRestore();
     });
 
     it('POST /sentences/getByUser debe devolver 400 si faltan datos', async () => {
-      const res = await request(app).post('/sentences/getByUser').send({});
+      const res = await request(app)
+        .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY) 
+        .send({});
       expect(res.statusCode).toBe(400);
     });
 
     it('POST /sentences/getByUser debe devolver 404 si el usuario no existe', async () => {
       const res = await request(app)
         .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY) 
         .send({ userId: '000000000000000000000000', emotions: ['alegria'] });
       expect(res.statusCode).toBe(404);
     });
@@ -158,6 +181,7 @@ describe('Sentence Controller', () => {
       jest.spyOn(User, 'findById').mockRejectedValueOnce(new Error('fail'));
       const res = await request(app)
         .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY) 
         .send({ userId: '000000000000000000000000', emotions: ['alegria'] });
       expect(res.statusCode).toBe(500);
       (User.findById as any).mockRestore();
