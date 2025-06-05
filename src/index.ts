@@ -7,6 +7,7 @@ import connectDB from "./config/db";
 import userRoutes from "./routes/user.routes";
 import sentenceRoutes from "./routes/sentence.routes"
 import authRouter from "./routes/auth.routes"
+import { authMiddleware } from "./middleware/auth";
 
 
 const app = express();
@@ -15,9 +16,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Rutas
-app.use("/users", userRoutes);
-app.use("/sentences", sentenceRoutes);
+// Rutas protegidas
+app.use("/users", authMiddleware, userRoutes);
+app.use("/sentences", authMiddleware, sentenceRoutes);
+
+// Rutas públicas
 app.use("/auth", authRouter)
 // Conectar a MongoDB y arrancar el servidor
 
