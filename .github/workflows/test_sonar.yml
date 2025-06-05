@@ -32,6 +32,7 @@ jobs:
           echo "PORT=${{ secrets.PORT }}" >> .env
           echo "NODE_ENV=test" >> .env
           echo "EMOTIONS=${{ secrets.EMOTIONS }}" >> .env
+          echo "API_KEYS=${{ secrets.API_KEYS }}" >> .env
           # Agrega aquí todas las variables necesarias
       - name: Set MONGO_URI_TEST
         run: echo "MONGO_URI_TEST=mongodb://localhost:27017/testdb" >> .env
