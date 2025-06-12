@@ -7,7 +7,9 @@ import connectDB from "./config/db";
 import userRoutes from "./routes/user.routes";
 import sentenceRoutes from "./routes/sentence.routes"
 import authRouter from "./routes/auth.routes"
+import productRoutes from "./routes/product.routes";
 import { authMiddleware } from "./middleware/auth";
+import { verifyUserId } from "./middleware/verifyUserId";
 
 
 const app = express();
@@ -16,9 +18,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
 // Rutas protegidas
-app.use("/users", authMiddleware, userRoutes);
-app.use("/sentences", authMiddleware, sentenceRoutes);
+app.use("/users", [authMiddleware, verifyUserId], userRoutes);
+app.use("/sentences", [authMiddleware, verifyUserId], sentenceRoutes);
+app.use("/shop", [authMiddleware, verifyUserId],productRoutes);
 
 // Rutas públicas
 app.use("/auth", authRouter)

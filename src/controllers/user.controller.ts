@@ -63,8 +63,12 @@ export const updateUserEmotions = async (req: Request, res: Response) => {
 export const getUserInfo = async (req: Request, res: Response) => {
   try {
     const { id } = req.query;
+    const userIdFromToken = (req as any).userId;
 
-    const user = await User.findById(id).lean();
+
+    const user = await User.findById(id)
+      .populate('favoriteSentences')
+      .lean();
 
     if (!user) {
       res.status(404).json({ error: 'Usuario no encontrado' });
@@ -97,6 +101,34 @@ export const getUserInfo = async (req: Request, res: Response) => {
           )
         : {};
 
+    // Agrupa y normaliza los logs por día
+    const logs: Array<{ emotions: string[]; timestamp: Date }> = user.emotionLogs ?? [];
+    const logsByDay: Record<string, Record<string, number>> = {};
+
+    logs.forEach(log => {
+      const date = new Date(log.timestamp).toISOString().slice(0, 10); // YYYY-MM-DD
+      if (!logsByDay[date]) logsByDay[date] = {};
+      log.emotions.forEach((emotion: string) => {
+        logsByDay[date][emotion] = (logsByDay[date][emotion] || 0) + 1;
+      });
+    });
+
+    const emotionsByDay = Object.entries(logsByDay).map(([date, counts]) => {
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      // Normaliza los valores
+      const normalizedCounts = Object.fromEntries(
+        Object.entries(counts).map(([emotion, count]) => [
+          emotion,
+          total > 0 ? parseFloat((count / total).toFixed(2)) : 0,
+        ])
+      );
+      return {
+        date,
+        counts: normalizedCounts,
+        total,
+      };
+    });
+
     res.json({
       _id: user._id,
       username: user.username,
@@ -104,6 +136,7 @@ export const getUserInfo = async (req: Request, res: Response) => {
       emotions: normalizedEmotions,
       lastSentence: user.lastSentence,
       emotionsCount: total,
+      emotionsByDay, // <-- Nuevo formato agrupado y normalizado
       favoriteSentences: user.favoriteSentences ?? [],
     });
   } catch (error) {
@@ -155,3 +188,59 @@ export const getLastSentence = async (req: Request, res: Response) => {
   }
 };
 
+export const addFavoriteSentence = async (req: Request, res: Response) => {
+  try {
+    const { userId, sentenceId } = req.body;
+
+    if (!userId || !sentenceId) {
+      res.status(400).json({ message: "Faltan datos necesarios" });
+      return;
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: "Usuario no encontrado" });
+      return;
+    }
+
+    if (user.favoriteSentences.includes(sentenceId)) {
+      res.status(400).json({ message: "La frase ya está en favoritos" });
+      return;
+    }
+
+    user.favoriteSentences.push(sentenceId);
+    await user.save();
+
+    res.status(200).json({ message: "Frase añadida a favoritos" });
+  } catch (error) {
+    res.status(500).json({ message: "Error al añadir la frase a favoritos", error: error });
+  }
+};
+
+export const removeFavoriteSentence = async (req: Request, res: Response) => {
+  try {
+    const { userId, sentenceId } = req.body;
+
+    if (!userId || !sentenceId) {
+      res.status(400).json({ message: "Faltan datos necesarios" });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: "Usuario no encontrado" });
+      return;
+    }
+
+    const index = user.favoriteSentences.indexOf(sentenceId);
+    if (index === -1) {
+      res.status(400).json({ message: "La frase no está en favoritos" });
+      return;
+    }
+
+    user.favoriteSentences.splice(index, 1);
+    await user.save();
+    res.status(200).json({ message: "Frase eliminada de favoritos" });
+  } catch (error) {
+    res.status(500).json({ message: "Error al eliminar la frase de favoritos", error: error });
+  }
+};

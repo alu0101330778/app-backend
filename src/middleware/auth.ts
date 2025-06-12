@@ -10,8 +10,8 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
     try {
-      const decoded = jwt.verify(token, SECRET);
-      (req as any).user = decoded;
+      const decoded = jwt.verify(token, SECRET) as { userId: string };
+      (req as any).userId = decoded.userId; // <-- Añade esto
       return next();
     } catch (err) {
       // Si el token es inválido, sigue para intentar api_key

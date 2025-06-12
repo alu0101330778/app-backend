@@ -3,8 +3,15 @@ import mongoose from 'mongoose';
 import app from '../../src/index';
 import Sentence from '../../src/models/sentence.model';
 import User from '../../src/models/user.model';
+import jwt from 'jsonwebtoken';
 
 const API_KEY = (process.env.API_KEYS?.split(',')[0] || 'test_api_key').trim();
+const SECRET = process.env.JWT_SECRET || 'testsecret';
+
+function getAuthHeader(userId: string) {
+  const token = jwt.sign({ userId }, SECRET, { expiresIn: '1h' });
+  return { Authorization: `Bearer ${token}` };
+}
 
 describe('Sentence Controller', () => {
   beforeEach(async () => {
@@ -71,18 +78,22 @@ describe('Sentence Controller', () => {
 
   describe('POST /sentences/getByUser', () => {
     it('debe devolver 400 si faltan datos', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
       const res = await request(app)
         .post('/sentences/getByUser')
         .set('x-api-key', API_KEY)
+        .set(getAuthHeader(fakeId))
         .send({});
       expect(res.statusCode).toBe(400);
     });
 
     it('debe devolver 404 si el usuario no existe', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
       const res = await request(app)
         .post('/sentences/getByUser')
         .set('x-api-key', API_KEY)
-        .send({ userId: new mongoose.Types.ObjectId().toString(), emotions: ['alegria'] });
+        .set(getAuthHeader(fakeId))
+        .send({ userId: fakeId, emotions: ['alegria'] });
       expect(res.statusCode).toBe(404);
     });
 
@@ -97,10 +108,12 @@ describe('Sentence Controller', () => {
         favoriteSentences: []
       });
       await user.save();
+      const userIdStr = (user._id as mongoose.Types.ObjectId).toString();
       const res = await request(app)
         .post('/sentences/getByUser')
         .set('x-api-key', API_KEY)
-        .send({ userId: (user._id as mongoose.Types.ObjectId).toString(), emotions: ['alegria'] });
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, emotions: ['alegria'] });
       expect(res.statusCode).toBe(404);
     });
 
@@ -116,10 +129,12 @@ describe('Sentence Controller', () => {
       });
       await user.save();
       await Sentence.create({ title: 't6', body: 'b6', end: 'e6' });
+      const userIdStr = (user._id as mongoose.Types.ObjectId).toString();
       const res = await request(app)
         .post('/sentences/getByUser')
         .set('x-api-key', API_KEY)
-        .send({ userId: (user._id as mongoose.Types.ObjectId).toString(), emotions: ['alegria'] });
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, emotions: ['alegria'] });
       expect(res.statusCode).toBe(200);
       expect(res.body).toBeDefined();
       expect(res.body.title).toBe('t6');
@@ -162,27 +177,33 @@ describe('Sentence Controller', () => {
     });
 
     it('POST /sentences/getByUser debe devolver 400 si faltan datos', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
       const res = await request(app)
         .post('/sentences/getByUser')
-        .set('x-api-key', API_KEY) 
+        .set('x-api-key', API_KEY)
+        .set(getAuthHeader(fakeId))
         .send({});
       expect(res.statusCode).toBe(400);
     });
 
     it('POST /sentences/getByUser debe devolver 404 si el usuario no existe', async () => {
+      const fakeId = '000000000000000000000000';
       const res = await request(app)
         .post('/sentences/getByUser')
-        .set('x-api-key', API_KEY) 
-        .send({ userId: '000000000000000000000000', emotions: ['alegria'] });
+        .set('x-api-key', API_KEY)
+        .set(getAuthHeader(fakeId))
+        .send({ userId: fakeId, emotions: ['alegria'] });
       expect(res.statusCode).toBe(404);
     });
 
     it('POST /sentences/getByUser debe manejar errores internos', async () => {
+      const fakeId = '000000000000000000000000';
       jest.spyOn(User, 'findById').mockRejectedValueOnce(new Error('fail'));
       const res = await request(app)
         .post('/sentences/getByUser')
-        .set('x-api-key', API_KEY) 
-        .send({ userId: '000000000000000000000000', emotions: ['alegria'] });
+        .set('x-api-key', API_KEY)
+        .set(getAuthHeader(fakeId))
+        .send({ userId: fakeId, emotions: ['alegria'] });
       expect(res.statusCode).toBe(500);
       (User.findById as any).mockRestore();
     });
