@@ -37,8 +37,8 @@ jobs:
       - name: Set MONGO_URI_TEST
         run: echo "MONGO_URI_TEST=mongodb://localhost:27017/testdb" >> .env
 
-      - name: Run tests
-        run: npm test
+      - name: Run Tests and coverage
+        run: npm run coverage
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
