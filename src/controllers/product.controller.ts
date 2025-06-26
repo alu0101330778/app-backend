@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Product } from "../models/products.model";
+import { isValidObjectId } from "mongoose";
 
 export const getProducts = async (req: Request, res: Response) => {
   try {
@@ -13,6 +14,11 @@ export const getProducts = async (req: Request, res: Response) => {
 export const getProductById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    // Validación estricta de tipo y formato para evitar NoSQLi
+    if (typeof id !== "string" || !isValidObjectId(id)) {
+      res.status(400).json({ message: "ID de producto inválido" });
+      return;
+    }
     const product = await Product.findById(id);
     if (!product) {
       res.status(404).json({ message: "Producto no encontrado" });
@@ -27,7 +33,7 @@ export const getProductById = async (req: Request, res: Response) => {
 
 export const getBooks = async (req: Request, res: Response) => {
   try {
-    const books = await Product.find({ category: 'book' }); // minúscula
+    const books = await Product.find({ category: 'book' });
     res.json(books);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener los libros", error: error });

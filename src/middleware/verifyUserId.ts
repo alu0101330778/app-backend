@@ -15,6 +15,15 @@ export function verifyUserId(req: Request, res: Response, next: NextFunction) {
     return next();
   }
 
+  // Si el id recibido no es string, rechaza con 400
+  if (
+    (idFromQuery && typeof idFromQuery !== "string") ||
+    (idFromBody && typeof idFromBody !== "string") ||
+    (idFromParams && typeof idFromParams !== "string")
+  ) {
+    return res.status(400).json({ message: "Formato de id inválido" });
+  }
+
   // Permite si alguno de los campos coincide con el userId del token
   if (
     userIdFromToken &&

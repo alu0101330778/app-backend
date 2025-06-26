@@ -1,32 +1,37 @@
 import { Request, Response } from "express";
 import User from "../models/user.model";
-
-export const getUsers = async (req: Request, res: Response) => {
-  try {
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Error al obtener usuarios", error: error });
-  }
-};
+import { ObjectId, Types } from "mongoose";
+import { isValidObjectId } from "mongoose";
 
 export const updateUserEmotions = async (req: Request, res: Response) => {
   try {
     const { userId, emotions } = req.body;
 
+    // Validación estricta de userId y emociones
+    if (
+      typeof userId !== "string" ||
+      !isValidObjectId(userId) ||
+      !Array.isArray(emotions) ||
+      !emotions.every((emotion) => typeof emotion === 'string')
+    ) {
+      res.status(400).json({
+        error: 'El campo "userId" debe ser un ObjectId válido y "emotions" debe ser un array de strings',
+      });
+      return;
+    }
+
     const EMOTIONS: string[] = JSON.parse(process.env.EMOTIONS || '[]');
     const validEmotions = EMOTIONS.map((e) => e.toLowerCase());
     if (
-      !Array.isArray(emotions) ||
       !emotions.every(
-        (emotion) => typeof emotion === 'string' && validEmotions.includes(emotion.toLowerCase())
+        (emotion) => validEmotions.includes(emotion.toLowerCase())
       )
     ) {
       res.status(400).json({
-        error: 'El campo "emotions" debe ser un array con emociones válidas',
+        error: 'El campo "emotions" debe contener solo emociones válidas',
         validEmotions: EMOTIONS,
       });
-      return ;
+      return;
     }
 
     const user = await User.findById(userId);
@@ -59,12 +64,14 @@ export const updateUserEmotions = async (req: Request, res: Response) => {
   }
 };
 
-
 export const getUserInfo = async (req: Request, res: Response) => {
   try {
     const { id } = req.query;
-    const userIdFromToken = (req as any).userId;
-
+    // Validación estricta de id
+    if (typeof id !== "string" || !isValidObjectId(id)) {
+      res.status(400).json({ error: 'ID de usuario inválido' });
+      return;
+    }
 
     const user = await User.findById(id)
       .populate('favoriteSentences')
@@ -144,34 +151,15 @@ export const getUserInfo = async (req: Request, res: Response) => {
   }
 };
 
-
-
-
-export const createUser = async (req: Request, res: Response) => {
-  try {
-    const { username, email, password } = req.body;
-    const newUser = new User({ username, email, password });
-    await newUser.save();
-    res.status(201).json({ message: "User created succesfully" });
-  } catch (error) {
-    res.status(500).json({ message: error });
-  }
-};
-
 export const getLastSentence = async (req: Request, res: Response) => {
   try {
     const { id } = req.query;
 
-    if (!id) {
-      res.status(400).json({ message: "Falta el ID del usuario" });
-      return;
-    }
-    // Verifica si el ID es un ObjectId válido
-    if (!/^[0-9a-fA-F]{24}$/.test(id as string)) {
+    if (typeof id !== "string" || !isValidObjectId(id)) {
       res.status(400).json({ message: "ID de usuario inválido" });
       return;
     }
-    //Verifica que el usuario exista y que itene una frase, si esto ocurre, se crea un objeto con el nombre del usuario yla ultima frase teniendo en cuenta que la frase es un objectId que se tiene que popular
+    //Verifica que el usuario exista y que tiene una frase, si esto ocurre, se crea un objeto con el nombre del usuario y la ultima frase teniendo en cuenta que la frase es un objectId que se tiene que popular
     const user = await User.findById(id).populate("lastSentence");
     
     if (!user || !user.lastSentence) {
@@ -192,22 +180,32 @@ export const addFavoriteSentence = async (req: Request, res: Response) => {
   try {
     const { userId, sentenceId } = req.body;
 
-    if (!userId || !sentenceId) {
-      res.status(400).json({ message: "Faltan datos necesarios" });
+    // Validación estricta de userId y sentenceId
+    if (
+      typeof userId !== "string" ||
+      !isValidObjectId(userId) ||
+      typeof sentenceId !== "string" ||
+      !isValidObjectId(sentenceId)
+    ) {
+      res.status(400).json({ message: "userId y sentenceId deben ser ObjectId válidos" });
       return;
     }
+
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "Usuario no encontrado" });
       return;
     }
 
-    if (user.favoriteSentences.includes(sentenceId)) {
+    // Convertir a ObjectId antes de comparar y agregar
+    const sentenceObjId = new Types.ObjectId(sentenceId);
+
+    if (user.favoriteSentences.some((s: any) => s.equals(sentenceObjId))) {
       res.status(400).json({ message: "La frase ya está en favoritos" });
       return;
     }
 
-    user.favoriteSentences.push(sentenceId);
+    user.favoriteSentences.push(sentenceObjId);
     await user.save();
 
     res.status(200).json({ message: "Frase añadida a favoritos" });
@@ -220,8 +218,14 @@ export const removeFavoriteSentence = async (req: Request, res: Response) => {
   try {
     const { userId, sentenceId } = req.body;
 
-    if (!userId || !sentenceId) {
-      res.status(400).json({ message: "Faltan datos necesarios" });
+    // Validación estricta de userId y sentenceId
+    if (
+      typeof userId !== "string" ||
+      !isValidObjectId(userId) ||
+      typeof sentenceId !== "string" ||
+      !isValidObjectId(sentenceId)
+    ) {
+      res.status(400).json({ message: "userId y sentenceId deben ser ObjectId válidos" });
       return;
     }
 
@@ -231,7 +235,8 @@ export const removeFavoriteSentence = async (req: Request, res: Response) => {
       return;
     }
 
-    const index = user.favoriteSentences.indexOf(sentenceId);
+    const sentenceObjId = new Types.ObjectId(sentenceId);
+    const index = user.favoriteSentences.findIndex((s: any) => s.equals(sentenceObjId));
     if (index === -1) {
       res.status(400).json({ message: "La frase no está en favoritos" });
       return;

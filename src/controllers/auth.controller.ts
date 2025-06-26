@@ -8,19 +8,27 @@ const SECRET = process.env.JWT_SECRET || '';
 export const register = async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    if (!username || !email || !password) {
-      res.status(400).json({ message: "Faltan campos obligatorios" });
+    // Validación estricta de tipos
+    if (
+      typeof username !== "string" ||
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !username ||
+      !email ||
+      !password
+    ) {
+      res.status(400).json({ message: "Faltan campos obligatorios o formato inválido" });
       return;
     }
 
-    const exists = await User.findOne({ email });
+    const exists = await User.findOne({ email: email.trim().toLowerCase() });
     if (exists) {
       res.status(409).json({ message: "Email ya registrado" });
       return;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await User.create({ username, email, password: hashedPassword });
+    await User.create({ username, email: email.trim().toLowerCase(), password: hashedPassword });
 
     res.status(200).json({ message: "Usuario registrado" });
   } catch (error) {
@@ -31,13 +39,19 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      res.status(400).json({ message: "Faltan campos obligatorios" });
+    // Validación estricta de tipos
+    if (
+      typeof email !== "string" ||
+      typeof password !== "string" ||
+      !email ||
+      !password
+    ) {
+      res.status(400).json({ message: "Faltan campos obligatorios o formato inválido" });
       return;
     }
 
-    const user = await User.findOne({ email });
-   
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+
     if (!user) {
       res.status(401).json({ message: "Credenciales inválidas" });
       return;

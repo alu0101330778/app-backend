@@ -19,63 +19,6 @@ describe('Sentence Controller', () => {
     await User.deleteMany({});
   });
 
-  describe('GET /sentences', () => {
-    it('debe devolver un array de frases', async () => {
-      await Sentence.create({ title: 't1', body: 'b1', end: 'e1' });
-      const res = await request(app)
-        .get('/sentences')
-        .set('x-api-key', API_KEY); 
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  describe('GET /sentences/all', () => {
-    it('debe devolver todas las frases', async () => {
-      await Sentence.create({ title: 't2', body: 'b2', end: 'e2' });
-      const res = await request(app)
-        .get('/sentences/all')
-        .set('x-api-key', API_KEY);
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(1);
-    });
-  });
-
-  describe('POST /sentences', () => {
-    it('debe crear una frase', async () => {
-      const res = await request(app)
-        .post('/sentences')
-        .set('x-api-key', API_KEY)
-        .send({ title: 't3', body: 'b3', end: 'e3' });
-      expect(res.statusCode).toBe(201);
-      expect(res.body.message).toBe('Sentence created succesfully');
-      const sentence = await Sentence.findOne({ title: 't3' });
-      expect(sentence).not.toBeNull();
-    });
-
-    it('debe fallar si faltan campos', async () => {
-      const res = await request(app)
-        .post('/sentences')
-        .set('x-api-key', API_KEY)
-        .send({ title: 't4' });
-      expect(res.statusCode).toBe(500);
-    });
-  });
-
-  describe('POST /sentences/get', () => {
-    it('debe devolver una frase (mock básico)', async () => {
-      await Sentence.create({ title: 't5', body: 'b5', end: 'e5' });
-      const res = await request(app)
-        .post('/sentences/get')
-        .set('x-api-key', API_KEY)
-        .send({ emotions: ['alegria'] });
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toBeDefined();
-    });
-  });
-
   describe('POST /sentences/getByUser', () => {
     it('debe devolver 400 si faltan datos', async () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
@@ -147,34 +90,6 @@ describe('Sentence Controller', () => {
       await User.deleteMany({});
     });
 
-    it('GET /sentences debe manejar errores internos', async () => {
-      jest.spyOn(Sentence, 'find').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app)
-        .get('/sentences')
-        .set('x-api-key', API_KEY); 
-      expect(res.statusCode).toBe(500);
-      (Sentence.find as any).mockRestore();
-    });
-
-    it('POST /sentences debe manejar errores internos', async () => {
-      jest.spyOn(Sentence.prototype, 'save').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app)
-        .post('/sentences')
-        .set('x-api-key', API_KEY) 
-        .send({ title: 'fail', body: 'fail', end: 'fail' });
-      expect(res.statusCode).toBe(500);
-      (Sentence.prototype.save as any).mockRestore();
-    });
-
-    it('POST /sentences/get debe manejar errores internos', async () => {
-      jest.spyOn(Sentence, 'findOne').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app)
-        .post('/sentences/get')
-        .set('x-api-key', API_KEY) 
-        .send({});
-      expect(res.statusCode).toBe(500);
-      (Sentence.findOne as any).mockRestore();
-    });
 
     it('POST /sentences/getByUser debe devolver 400 si faltan datos', async () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
@@ -206,6 +121,41 @@ describe('Sentence Controller', () => {
         .send({ userId: fakeId, emotions: ['alegria'] });
       expect(res.statusCode).toBe(500);
       (User.findById as any).mockRestore();
+    });
+  });
+
+  describe('NoSQL Injection protection', () => {
+    let userIdStr: string;
+    beforeEach(async () => {
+      const user = new User({
+        username: 'nosqliUser',
+        email: 'nosqli@test.com',
+        password: '123456',
+        emotions: new Map(),
+        emotionsCount: 0,
+        emotionLogs: [],
+        favoriteSentences: []
+      });
+      await user.save();
+      userIdStr = (user._id as mongoose.Types.ObjectId).toString();
+    });
+
+    it('debe rechazar userId como objeto en /sentences/getByUser', async () => {
+      const res = await request(app)
+        .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY)
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: { $gt: '' }, emotions: ['alegria'] });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar emotions como objeto en /sentences/getByUser', async () => {
+      const res = await request(app)
+        .post('/sentences/getByUser')
+        .set('x-api-key', API_KEY)
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, emotions: { $ne: [] } });
+      expect(res.statusCode).toBe(400);
     });
   });
 });

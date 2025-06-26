@@ -100,4 +100,27 @@ describe('Auth Controller', () => {
       (User.findOne as any).mockRestore();
     });
   });
+
+  describe('NoSQL Injection protection', () => {
+    it('debe rechazar registro si email es un objeto', async () => {
+      const res = await request(app)
+        .post('/auth/register')
+        .send({ username: 'user', email: { $gt: '' }, password: '123456' });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar login si email es un objeto', async () => {
+      const res = await request(app)
+        .post('/auth/login')
+        .send({ email: { $gt: '' }, password: '123456' });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar login si password es un objeto', async () => {
+      const res = await request(app)
+        .post('/auth/login')
+        .send({ email: 'auth@test.com', password: { $gt: '' } });
+      expect(res.statusCode).toBe(400);
+    });
+  });
 });

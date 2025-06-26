@@ -26,37 +26,6 @@ describe('User Controller', () => {
     process.env.EMOTIONS = originalEmotionsEnv;
   });
 
-  describe('GET /users', () => {
-    it('debe devolver un array de usuarios', async () => {
-      const res = await request(app)
-        .get('/users')
-        .set('x-api-key', API_KEY);
-      expect(res.statusCode).toBe(200);
-      expect(Array.isArray(res.body)).toBe(true);
-    });
-  });
-
-  describe('POST /users', () => {
-    it('debe crear un usuario', async () => {
-      const res = await request(app)
-        .post('/users')
-        .set('x-api-key', API_KEY)
-        .send({ username: 'testuser', email: 'test@test.com', password: '123456' });
-      expect(res.statusCode).toBe(201);
-      expect(res.body.message).toBe('User created succesfully');
-      const user = await User.findOne({ email: 'test@test.com' });
-      expect(user).not.toBeNull();
-      userId = (user?._id as mongoose.Types.ObjectId).toString() || '';
-    });
-
-    it('debe fallar si faltan campos', async () => {
-      const res = await request(app)
-        .post('/users')
-        .set('x-api-key', API_KEY)
-        .send({ username: 'testuser' });
-      expect([400, 500]).toContain(res.statusCode);
-    });
-  });
 
   describe('GET /users/info', () => {
     it('debe devolver info del usuario', async () => {
@@ -178,15 +147,6 @@ describe('User Controller', () => {
   });
 
   describe('User Controller - coverage extra', () => {
-    it('GET /users debe manejar errores internos', async () => {
-      jest.spyOn(User, 'find').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app)
-        .get('/users')
-        .set('x-api-key', API_KEY);
-      expect(res.statusCode).toBe(500);
-      expect(res.body.message).toBe('Error al obtener usuarios');
-      (User.find as any).mockRestore();
-    });
 
     it('POST /users/emotions debe manejar errores internos', async () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
@@ -213,15 +173,6 @@ describe('User Controller', () => {
       (User.findById as any).mockRestore();
     });
 
-    it('POST /users debe manejar errores internos', async () => {
-      jest.spyOn(User.prototype, 'save').mockRejectedValueOnce(new Error('fail'));
-      const res = await request(app)
-        .post('/users')
-        .set('x-api-key', API_KEY)
-        .send({ username: 'fail', email: 'fail@test.com', password: 'fail' });
-      expect(res.statusCode).toBe(500);
-      (User.prototype.save as any).mockRestore();
-    });
 
     it('GET /users/last debe manejar errores internos', async () => {
       const fakeId = new mongoose.Types.ObjectId().toString();
@@ -233,6 +184,87 @@ describe('User Controller', () => {
       expect(res.statusCode).toBe(500);
       expect(res.body.message).toBe('Error al obtener la frase del usuario');
       (User.findById as any).mockRestore();
+    });
+  });
+
+  describe('NoSQL Injection protection', () => {
+    let userIdStr: string;
+    beforeEach(async () => {
+      const user = new User({
+        username: 'nosqliUser',
+        email: 'nosqli@test.com',
+        password: '123456',
+        emotions: new Map(),
+        emotionsCount: 0,
+        emotionLogs: [],
+        favoriteSentences: []
+      });
+      await user.save();
+      userIdStr = (user._id as mongoose.Types.ObjectId).toString();
+    });
+
+    it('debe rechazar userId como objeto en /users/emotions', async () => {
+      const res = await request(app)
+        .post('/users/emotions')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: { $gt: '' }, emotions: ['alegria'] });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar emotions como objeto en /users/emotions', async () => {
+      const res = await request(app)
+        .post('/users/emotions')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, emotions: { $ne: [] } });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar userId como objeto en /users/favorite', async () => {
+      const res = await request(app)
+        .post('/users/favorite')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: { $gt: '' }, sentenceId: userIdStr });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar sentenceId como objeto en /users/favorite', async () => {
+      const res = await request(app)
+        .post('/users/favorite')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, sentenceId: { $gt: '' } });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar userId como objeto en /users/favorite (remove)', async () => {
+      const res = await request(app)
+        .put('/users/favorite')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: { $gt: '' }, sentenceId: userIdStr });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar sentenceId como objeto en /users/favorite (remove)', async () => {
+      const res = await request(app)
+        .put('/users/favorite')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, sentenceId: { $gt: '' } });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar id como objeto en /users/info', async () => {
+      const res = await request(app)
+        .get('/users/info')
+        .set(getAuthHeader(userIdStr))
+        .query({ id: { $gt: '' } });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('debe rechazar id como objeto en /users/last', async () => {
+      const res = await request(app)
+        .get('/users/last')
+        .set(getAuthHeader(userIdStr))
+        .query({ id: { $gt: '' } });
+      expect(res.statusCode).toBe(400);
     });
   });
 
