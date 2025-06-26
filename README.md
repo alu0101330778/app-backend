@@ -1,6 +1,24 @@
+<!-- Para README.md y doc/README.md -->
+
 # app-back
 
-Este proyecto es una API RESTful para la gestión de productos de una tienda online de libros, suplementos, tés y aromaterapia. Permite realizar operaciones CRUD sobre productos almacenados en una base de datos MongoDB y cuenta con autenticación de usuarios, gestión de frases motivacionales y control de emociones.
+Este proyecto nace de la necesidad de trasladar al entorno digital una práctica emocional y reflexiva inspirada en los libros de Felipe. En dichas obras, cada página invita a una pausa emocional mediante una reflexión, y el lector es animado a abrir el libro al azar, confiando en que la “casualidad” le brindará la frase adecuada para su momento vital.
+
+La aplicación amplía este concepto, combinando la experiencia de azar significativa con inteligencia artificial para sugerir frases personalizadas según el estado emocional del usuario. Así, el usuario puede acceder a reflexiones de los libros de Felipe tanto de forma aleatoria como mediante un sistema de recomendación basado en emociones.
+
+## Objetivo
+
+Desarrollar una aplicación móvil multiplataforma que permita:
+
+- Acceder a reflexiones de los libros de Felipe de forma aleatoria o personalizada.
+- Registrar y analizar la evolución emocional del usuario mediante gráficas.
+- Mostrar reflexiones acompañadas de imágenes generadas por IA.
+- Convertir frases en audio.
+- Ofrecer productos recomendados según el perfil emocional del usuario.
+
+## Justificación
+
+La aplicación integra literatura, inteligencia artificial, diseño emocional y recomendaciones personalizadas, creando una herramienta con potencial comercial, terapéutico y educativo. Se prioriza una interfaz emocionalmente amable, el cumplimiento normativo de privacidad y una arquitectura técnica escalable.
 
 ## Características principales
 

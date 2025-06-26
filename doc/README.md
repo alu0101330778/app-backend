@@ -17,7 +17,13 @@
 
 ## Introducción
 
-Esta API permite gestionar un catálogo de productos para una tienda online, incluyendo libros, suplementos, tés y aceites esenciales. Además, permite la gestión de usuarios, frases motivacionales y emociones asociadas a los usuarios. Está desarrollada en Node.js con Express y utiliza MongoDB como base de datos.
+Este proyecto surge de la necesidad de trasladar al entorno digital una práctica emocional y reflexiva presente en varios libros del autor Felipe. En sus obras, cada página contiene una reflexión diseñada para invitar a una pausa emocional, y el lector es animado a abrir el libro aleatoriamente, confiando en que la “casualidad” conducirá a la frase adecuada para su momento vital.
+
+Esta mecánica, basada en el concepto de sincronicidad y conexión emocional, ha sido adaptada y ampliada en una aplicación móvil. Además de permitir acceder a los contenidos de los libros desde la app, se incorpora una capa de inteligencia artificial capaz de sugerir frases basadas en el estado emocional del usuario. De este modo, se combina la experiencia de azar significativa con la personalización mediante IA.
+
+El objetivo de la API es proporcionar los servicios necesarios para que la aplicación móvil permita al usuario acceder a reflexiones de los libros de Felipe, ya sea de forma aleatoria o mediante un sistema de recomendación personalizado basado en emociones. Además, la aplicación registra emociones mediante interacción inicial, genera gráficas de evolución emocional, muestra reflexiones acompañadas de imágenes generadas por IA, convierte las frases en audio y ofrece productos en base al perfil emocional del usuario.
+
+La arquitectura de la API prioriza la escalabilidad, la seguridad y el cumplimiento normativo de privacidad, integrando literatura, inteligencia artificial y diseño emocional en una herramienta con potencial comercial, terapéutico y educativo.
 
 ---
 
@@ -257,4 +263,4 @@ curl -X POST http://localhost:3000/auth/login \
 ---
 
 ¿Dudas o sugerencias?  
-Contacta con el autor o abre un issue en
+Contacta con el autor o abre un issue en GitHub.
