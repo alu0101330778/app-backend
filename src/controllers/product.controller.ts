@@ -1,10 +1,5 @@
 import { Request, Response } from "express";
 import { Product } from "../models/products.model";
-import { Book } from "../models/products/books.model";
-import { Suplement } from "../models/products/suplements.model";
-import { Aromatherapy } from "../models/products/aroma.model";
-import { Tea } from "../models/products/tea.model";
-import { Types } from 'mongoose';
 
 export const getProducts = async (req: Request, res: Response) => {
   try {

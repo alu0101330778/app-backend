@@ -7,6 +7,7 @@ import connectDB from "./config/db";
 import userRoutes from "./routes/user.routes";
 import sentenceRoutes from "./routes/sentence.routes"
 import authRouter from "./routes/auth.routes"
+import randomRoutes from "./routes/random.routes";
 import productRoutes from "./routes/product.routes";
 import { authMiddleware } from "./middleware/auth";
 import { verifyUserId } from "./middleware/verifyUserId";
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use("/users", [authMiddleware, verifyUserId], userRoutes);
 app.use("/sentences", [authMiddleware, verifyUserId], sentenceRoutes);
 app.use("/shop", [authMiddleware, verifyUserId],productRoutes);
+app.use("/random", [authMiddleware, verifyUserId], randomRoutes);
 
 // Rutas públicas
 app.use("/auth", authRouter)
