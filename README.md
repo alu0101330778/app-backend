@@ -1,6 +1,7 @@
 <!-- Para README.md y doc/README.md -->
 
 # app-back
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=backend-app_backend-app&metric=alert_status&token=fc735e23f3cd889be0c426f67a4602da83d1472c)](https://sonarcloud.io/summary/new_code?id=backend-app_backend-app)
 
 Este proyecto nace de la necesidad de trasladar al entorno digital una práctica emocional y reflexiva inspirada en los libros de Felipe. En dichas obras, cada página invita a una pausa emocional mediante una reflexión, y el lector es animado a abrir el libro al azar, confiando en que la “casualidad” le brindará la frase adecuada para su momento vital.
 
