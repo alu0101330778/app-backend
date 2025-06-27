@@ -3,6 +3,7 @@ import Sentence from "../models/sentence.model";
 import User from "../models/user.model";
 import { Types } from 'mongoose';
 import { isValidObjectId } from 'mongoose';
+import crypto from "crypto";
 
 
 export const getSentenceByUser = async (req: Request, res: Response) => {
@@ -72,6 +73,8 @@ function calculateSeed(userProfile: Record<string, number>, emocionesSeleccionad
     const count = userProfile[em] || 0;
     base += count * em.length;
   });
-  base += Math.floor(Math.random() * 1000);
+  // Usa un byte aleatorio seguro (0-255)
+  const randomByte = crypto.randomBytes(1)[0];
+  base += randomByte;
   return base;
 }

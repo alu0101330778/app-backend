@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/user.model";
-import { ObjectId, Types } from "mongoose";
-import { isValidObjectId } from "mongoose";
+import { Types, isValidObjectId } from "mongoose";
 
 export const updateUserEmotions = async (req: Request, res: Response) => {
   try {
@@ -40,7 +39,7 @@ export const updateUserEmotions = async (req: Request, res: Response) => {
       return;
     }
 
-    const emotionsMap = user.emotions as Map<string, number>;
+    const emotionsMap = user.emotions;
 
     emotions.forEach((emotion: string) => {
       const key = emotion.toLowerCase();

@@ -15,8 +15,8 @@ import { verifyUserId } from "./middleware/verifyUserId";
 
 const app = express();
 
-// Middlewares
-app.use(cors());
+app.disable('x-powered-by'); // <-- Añade esta línea justo después de crear la app
+
 app.use(express.json());
 
 

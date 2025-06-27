@@ -58,10 +58,10 @@ export const getAromatherapies = async (req: Request, res: Response) => {
   }
 };
 
-export const getSuplements = async (req: Request, res: Response) => {
+export const getSupplements = async (req: Request, res: Response) => {
   try {
-    const suplements = await Product.find({ category: 'suplement' });
-    res.json(suplements);
+    const supplements = await Product.find({ category: 'supplement' });
+    res.json(supplements);
   } catch (error) {
     res.status(500).json({ message: "Error al obtener los suplementos", error: error });
   }

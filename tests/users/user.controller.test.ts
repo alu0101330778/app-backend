@@ -2,6 +2,7 @@ import request from 'supertest';
 import mongoose, { ObjectId } from 'mongoose';
 import app from '../../src/index';
 import User from '../../src/models/user.model';
+import Sentence from '../../src/models/sentence.model';
 import { jest } from '@jest/globals';
 import jwt from 'jsonwebtoken';
 
@@ -143,6 +144,116 @@ describe('User Controller', () => {
         .set(getAuthHeader(fakeId))
         .query({ id: fakeId });
       expect(res.statusCode).toBe(404);
+    });
+
+     it('debe devolver 404 si el usuario no existe', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const fakeId2 = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .post('/users/last')
+        .set(getAuthHeader(fakeId))
+        .query({ userId: fakeId, sentenceId: fakeId2 });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('User Controller - cobertura avanzada', () => {
+    let userId: string;
+    let sentenceId: string;
+
+    beforeEach(async () => {
+      await User.deleteMany({});
+      await Sentence.deleteMany({});
+      // Crea una frase de ejemplo
+      const sentence = await Sentence.create({ title: 'Frase', body: 'Cuerpo', end: 'Fin' });
+      sentenceId = (sentence._id as mongoose.Types.ObjectId).toString();
+
+      // Crea el usuario de ejemplo con emociones como objeto plano y logs variados
+      const user = new User({
+        _id: new mongoose.Types.ObjectId("684b253d59ba8aa2fbbeda3b"),
+        username: "admin",
+        email: "admin@admin.com",
+        password: "$2b$10$r0qUSuiGH.b8BDRO.VSdBei1YnF53ulBUZR4KAGTdyc62U4Z27RDK",
+        favoriteSentences: [],
+        emotions: {
+          alegria: 3,
+          amor: 2,
+          tristeza: 1,
+          vergüenza: 1,
+          ansiedad: 2,
+          felicidad: 2
+        },
+        emotionsCount: 11,
+        emotionLogs: [
+          { emotions: ["Alegria"], timestamp: new Date("2025-06-12T19:06:55.212Z") },
+          { emotions: ["Amor"], timestamp: new Date("2025-06-12T19:10:05.915Z") },
+          { emotions: ["Amor", "Tristeza"], timestamp: new Date("2025-06-12T19:21:19.507Z") },
+          { emotions: ["Vergüenza"], timestamp: new Date("2025-06-12T19:23:06.767Z") },
+          { emotions: ["Alegria"], timestamp: new Date("2025-06-12T19:29:40.534Z") },
+          { emotions: ["Ansiedad", "Felicidad"], timestamp: new Date("2025-06-12T19:33:33.987Z") },
+          { emotions: ["Felicidad", "Ansiedad"], timestamp: new Date("2025-06-12T20:02:54.463Z") },
+          { emotions: ["Alegria"], timestamp: new Date("2025-06-12T20:07:56.585Z") }
+        ],
+        lastSentence: sentence._id
+      });
+      await user.save();
+      userId = (user._id as mongoose.Types.ObjectId).toString();
+    });
+
+    it('GET /users/info cubre emociones como objeto plano y logs agrupados', async () => {
+      const res = await request(app)
+        .get('/users/info')
+        .set(getAuthHeader(userId))
+        .query({ id: userId });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.emotions).toBeDefined();
+      expect(res.body.emotionsByDay).toBeInstanceOf(Array);
+      // Debe haber emociones normalizadas y agrupadas por día
+      expect(Object.keys(res.body.emotions).length).toBeGreaterThan(0);
+      expect(res.body.emotionsByDay.length).toBeGreaterThan(0);
+    });
+
+    it('GET /users/last cubre usuario con lastSentence', async () => {
+      const res = await request(app)
+        .get('/users/last')
+        .set(getAuthHeader(userId))
+        .query({ id: userId });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.username).toBe("admin");
+      expect(res.body.lastSentence).toBeDefined();
+      expect(res.body.lastSentence.title).toBe("Frase");
+    });
+
+    it('POST /users/favorite añade y elimina favoritos correctamente', async () => {
+      // Añadir favorito
+      let res = await request(app)
+        .post('/users/favorite')
+        .set(getAuthHeader(userId))
+        .send({ userId, sentenceId });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toMatch(/añadida/);
+
+      // Intentar añadir de nuevo (debe dar 400)
+      res = await request(app)
+        .post('/users/favorite')
+        .set(getAuthHeader(userId))
+        .send({ userId, sentenceId });
+      expect(res.statusCode).toBe(400);
+
+      // Eliminar favorito
+      res = await request(app)
+        .put('/users/favorite')
+        .set(getAuthHeader(userId))
+        .send({ userId, sentenceId });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toMatch(/eliminada/);
+
+      // Intentar eliminar de nuevo (debe dar 400)
+      res = await request(app)
+        .put('/users/favorite')
+        .set(getAuthHeader(userId))
+        .send({ userId, sentenceId });
+      expect(res.statusCode).toBe(400);
     });
   });
 
