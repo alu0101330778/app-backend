@@ -379,4 +379,98 @@ describe('User Controller', () => {
     });
   });
 
+  describe('PATCH /users/settings', () => {
+    let user: any;
+    let userIdStr: string;
+
+    beforeEach(async () => {
+      user = new User({
+        username: 'settingsUser',
+        email: 'settings@test.com',
+        password: '123456',
+        emotions: new Map(),
+        emotionsCount: 0,
+        emotionLogs: [],
+        favoriteSentences: [],
+        enableEmotions: true,
+        randomReflexion: false
+      });
+      await user.save();
+      userIdStr = (user._id as mongoose.Types.ObjectId).toString();
+    });
+
+    it('debe actualizar enableEmotions', async () => {
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, enableEmotions: false });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe("Configuración actualizada");
+      const updated = await User.findById(userIdStr);
+      expect(updated?.enableEmotions).toBe(false);
+    });
+
+    it('debe actualizar randomReflexion', async () => {
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, randomReflexion: true });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe("Configuración actualizada");
+      const updated = await User.findById(userIdStr);
+      expect(updated?.randomReflexion).toBe(true);
+    });
+
+    it('debe actualizar ambos campos a la vez', async () => {
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, enableEmotions: false, randomReflexion: true });
+      expect(res.statusCode).toBe(200);
+      expect(res.body.message).toBe("Configuración actualizada");
+      const updated = await User.findById(userIdStr);
+      expect(updated?.enableEmotions).toBe(false);
+      expect(updated?.randomReflexion).toBe(true);
+    });
+
+    it('debe devolver 400 si enableEmotions no es booleano', async () => {
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, enableEmotions: 'no' });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("enableEmotions debe ser booleano");
+    });
+
+    it('debe devolver 400 si randomReflexion no es booleano', async () => {
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, randomReflexion: 'no' });
+      expect(res.statusCode).toBe(400);
+      expect(res.body.message).toBe("randomReflexion debe ser booleano");
+    });
+
+    it('debe devolver 404 si el usuario no existe', async () => {
+      const fakeId = new mongoose.Types.ObjectId().toString();
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(fakeId))
+        .send({ userId: fakeId, enableEmotions: false });
+      expect(res.statusCode).toBe(404);
+      expect(res.body.message).toBe("Usuario no encontrado");
+    });
+
+    it('debe manejar errores internos', async () => {
+      const spy = jest.spyOn(User, 'findById').mockRejectedValueOnce(new Error('fail'));
+      const res = await request(app)
+        .patch('/users/settings')
+        .set(getAuthHeader(userIdStr))
+        .send({ userId: userIdStr, enableEmotions: false });
+      expect(res.statusCode).toBe(500);
+      expect(res.body.message).toBe("Error actualizando configuración");
+      spy.mockRestore();
+    });
+  });
+
 });

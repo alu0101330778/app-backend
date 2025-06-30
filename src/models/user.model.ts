@@ -12,9 +12,11 @@ interface IUser extends Document {
   password: string;
   lastSentence?: Types.ObjectId;
   favoriteSentences: Types.ObjectId[];
-  emotions: Map<string, number>;  // Contador por emoción
-  emotionsCount: number;                // Conteo total de emociones
-  emotionLogs: IEmotionLog[];           // Historial emocional
+  emotions: Map<string, number>;
+  emotionsCount: number;
+  emotionLogs: IEmotionLog[];
+  enableEmotions: boolean;      // <-- Añadido
+  randomReflexion: boolean;     // <-- Añadido
 }
 
 const EmotionLogSchema = new Schema<IEmotionLog>({
@@ -31,6 +33,8 @@ const UserSchema: Schema = new Schema({
   emotions: { type: Map, of: Number, default: {} },
   emotionsCount: { type: Number, default: 0 },
   emotionLogs: [EmotionLogSchema],
+  enableEmotions: { type: Boolean, default: true },      // <-- Añadido
+  randomReflexion: { type: Boolean, default: true },    // <-- Añadido
 });
 
 const User = mongoose.model<IUser>('User', UserSchema);

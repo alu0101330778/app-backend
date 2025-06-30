@@ -65,7 +65,7 @@ export const login = async (req: Request, res: Response) => {
     
     const token = jwt.sign({ userId: user._id }, SECRET, { expiresIn: '7d' });
 
-    res.json({ token, userId: user._id, username: user.username, email: user.email });
+    res.json({ token, userId: user._id, username: user.username, email: user.email, enableEmotions: user.enableEmotions, randomReflexion: user.randomReflexion });
   } catch (error) {
     res.status(500).json({ message: error });
   }

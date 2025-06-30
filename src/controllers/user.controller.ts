@@ -144,6 +144,8 @@ export const getUserInfo = async (req: Request, res: Response) => {
       emotionsCount: total,
       emotionsByDay, // <-- Nuevo formato agrupado y normalizado
       favoriteSentences: user.favoriteSentences ?? [],
+      enableEmotions: user.enableEmotions,
+      randomReflexion: user.randomReflexion
     });
   } catch (error) {
     res.status(500).json({ message: 'Error del servidor', error: error });
@@ -246,5 +248,49 @@ export const removeFavoriteSentence = async (req: Request, res: Response) => {
     res.status(200).json({ message: "Frase eliminada de favoritos" });
   } catch (error) {
     res.status(500).json({ message: "Error al eliminar la frase de favoritos", error: error });
+  }
+};
+
+export const updateUserSettings = async (req: Request, res: Response) => {
+  try {
+    const { userId, enableEmotions, randomReflexion } = req.body;
+
+    if (typeof userId !== "string" || !isValidObjectId(userId)) {
+      res.status(403).json({ message: "userId inválido" });
+      return;
+    }
+
+    if (
+      enableEmotions !== undefined &&
+      typeof enableEmotions !== "boolean"
+    ) {
+      res.status(400).json({ message: "enableEmotions debe ser booleano" });
+      return;
+    }
+
+    if (
+      randomReflexion !== undefined &&
+      typeof randomReflexion !== "boolean"
+    ) {
+      res.status(400).json({ message: "randomReflexion debe ser booleano" });
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({ message: "Usuario no encontrado" });
+      return;
+    }
+
+    if (enableEmotions !== undefined) user.enableEmotions = enableEmotions;
+    if (randomReflexion !== undefined) user.randomReflexion = randomReflexion;
+
+    await user.save();
+
+    res.json({
+      message: "Configuración actualizada"
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error actualizando configuración", error });
   }
 };

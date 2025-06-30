@@ -9,16 +9,14 @@ import crypto from "crypto";
 export const getSentenceByUser = async (req: Request, res: Response) => {
   try {
     const { userId, emotions } = req.body;
-
     // Validación estricta de entrada
     if (
       typeof userId !== "string" ||
       !isValidObjectId(userId) ||
       !Array.isArray(emotions) ||
-      emotions.length === 0 ||
       emotions.some(e => typeof e !== "string")
     ) {
-      res.status(400).json({ error: 'Datos inválidos: Se requiere userId válido y un array de emociones (strings) no vacío.' });
+      res.status(400).json({ error: 'Datos inválidos: Se requiere userId válido y un array de emociones (strings).' });
       return;
     }
 
@@ -34,7 +32,13 @@ export const getSentenceByUser = async (req: Request, res: Response) => {
       ? Object.fromEntries(user.emotions.entries())
       : {};
 
-    const seed = calculateSeed(emotionsObject, emotions.map((e: string) => e.toLowerCase()));
+    // Si el array de emociones está vacío, simplemente usa un número aleatorio como semilla
+    let seed: number;
+    if (emotions.length === 0) {
+      seed = crypto.randomBytes(4).readUInt32BE(0);
+    } else {
+      seed = calculateSeed(emotionsObject, emotions.map((e: string) => e.toLowerCase()));
+    }
 
     // Obtener frase basada en la semilla
     const totalFrases = await Sentence.countDocuments();
@@ -59,9 +63,7 @@ export const getSentenceByUser = async (req: Request, res: Response) => {
       res.status(500).json({ message: 'Error al actualizar el usuario con la última frase.', error: error });
       return;
     }
-
     res.json(frase);
-
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor.', error: error });
   }
