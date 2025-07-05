@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from "../models/user.model";
+import Sentence from "../models/sentence.model";
 import { Types, isValidObjectId } from "mongoose";
 
 export const updateUserEmotions = async (req: Request, res: Response) => {
@@ -179,41 +180,59 @@ export const getLastSentence = async (req: Request, res: Response) => {
 
 export const addFavoriteSentence = async (req: Request, res: Response) => {
   try {
-    const { userId, sentenceId } = req.body;
+    const { userId, sentenceId, title } = req.body;
 
-    // Validación estricta de userId y sentenceId
-    if (
-      typeof userId !== "string" ||
-      !isValidObjectId(userId) ||
-      typeof sentenceId !== "string" ||
-      !isValidObjectId(sentenceId)
-    ) {
-      res.status(400).json({ message: "userId y sentenceId deben ser ObjectId válidos" });
+    // Validar userId
+    if (typeof userId !== "string" || !isValidObjectId(userId)) {
+      res.status(400).json({ message: "userId inválido" });
       return;
+    }
+
+    if (!sentenceId && !title) {
+     res.status(400).json({ message: "Se requiere sentenceId o title" });
+     return;
+    }
+
+    let finalSentenceId = sentenceId;
+
+    if (!finalSentenceId && title) {
+      const sentence = await Sentence.findOne({ title });
+      if (!sentence) {
+         res.status(404).json({ message: "Frase no encontrada por título" });
+         return;
+      }
+      finalSentenceId = (sentence._id as Types.ObjectId | string).toString();
+    }
+
+    if (!isValidObjectId(finalSentenceId)) {
+     res.status(400).json({ message: "sentenceId inválido" });
+     return;
     }
 
     const user = await User.findById(userId);
     if (!user) {
-      res.status(404).json({ message: "Usuario no encontrado" });
-      return;
+     res.status(404).json({ message: "Usuario no encontrado" });
+     return;
     }
 
-    // Convertir a ObjectId antes de comparar y agregar
-    const sentenceObjId = new Types.ObjectId(sentenceId);
+    const sentenceObjId = new Types.ObjectId(finalSentenceId);
 
     if (user.favoriteSentences.some((s: any) => s.equals(sentenceObjId))) {
-      res.status(400).json({ message: "La frase ya está en favoritos" });
-      return;
+     res.status(400).json({ message: "La frase ya está en favoritos" });
+     return;
     }
 
     user.favoriteSentences.push(sentenceObjId);
     await user.save();
 
     res.status(200).json({ message: "Frase añadida a favoritos" });
+    return;
   } catch (error) {
-    res.status(500).json({ message: "Error al añadir la frase a favoritos", error: error });
+    res.status(500).json({ message: "Error al añadir la frase a favoritos", error });
+    return;
   }
 };
+
 
 export const removeFavoriteSentence = async (req: Request, res: Response) => {
   try {
@@ -251,6 +270,8 @@ export const removeFavoriteSentence = async (req: Request, res: Response) => {
   }
 };
 
+// al actualizar la configuracion no puede estar randomReflexion en false si enableEmotions en false,
+// Es decir las unicas posibilidades son: randomReflexion: true, enableEmotions: true / randomReflexion: false, enableEmotions: true / randomReflexion: true, enableEmotions: false
 export const updateUserSettings = async (req: Request, res: Response) => {
   try {
     const { userId, enableEmotions, randomReflexion } = req.body;
@@ -276,6 +297,18 @@ export const updateUserSettings = async (req: Request, res: Response) => {
       return;
     }
 
+    // ⚠️ Validación: no permitir ambos en false
+    const finalEnableEmotions = enableEmotions ?? true; // default a true si no se envía
+    const finalRandomReflexion = randomReflexion ?? true;
+
+    if (!finalEnableEmotions && !finalRandomReflexion) {
+      res.status(405).json({
+        message:
+          "Configuración inválida: no se puede desactivar randomReflexion si enableEmotions está desactivado.",
+      });
+      return;
+    }
+
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "Usuario no encontrado" });
@@ -288,9 +321,11 @@ export const updateUserSettings = async (req: Request, res: Response) => {
     await user.save();
 
     res.json({
-      message: "Configuración actualizada"
+      message: "Configuración actualizada",
     });
   } catch (error) {
-    res.status(500).json({ message: "Error actualizando configuración", error });
+    res
+      .status(500)
+      .json({ message: "Error actualizando configuración", error });
   }
 };
